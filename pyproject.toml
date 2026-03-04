@@ -1,0 +1,101 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+# ---------------------------------------------------------------------------
+# Project metadata
+# ---------------------------------------------------------------------------
+[project]
+name = "archer"
+version = "0.1.0"
+description = "A high-level Pulumi wrapper CLI for deploying AWS, Azure, and GCP infrastructure from YAML."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+keywords = ["pulumi", "infrastructure", "iac", "aws", "azure", "gcp", "cli"]
+
+dependencies = [
+    # Cloud providers
+    "pulumi>=3.110.0,<4.0.0",
+    "pulumi-aws>=6.35.0,<7.0.0",
+    "pulumi-azure-native>=2.39.0,<3.0.0",
+    "pulumi-gcp>=7.26.0,<8.0.0",
+    # Data validation
+    "pydantic>=2.7.0,<3.0.0",
+    # CLI
+    "click>=8.1.0,<9.0.0",
+    # Logging
+    "loguru>=0.7.2,<1.0.0",
+    # YAML parsing
+    "pyyaml>=6.0.1",
+    # Rich terminal output (used only in cli.py)
+    "rich>=13.7.0",
+]
+
+[project.scripts]
+archer = "archer.cli:cli"
+
+[project.optional-dependencies]
+dev = [
+    "ruff>=0.4.0",
+    "pyright>=1.1.0",
+    "pytest>=8.0.0",
+    "pytest-mock>=3.14.0",
+]
+
+# ---------------------------------------------------------------------------
+# Hatch build — src layout
+# ---------------------------------------------------------------------------
+[tool.hatch.build.targets.wheel]
+packages = ["src/archer"]
+
+# ---------------------------------------------------------------------------
+# Ruff — linting & formatting (single source of truth)
+# ---------------------------------------------------------------------------
+[tool.ruff]
+line-length = 180
+src = ["src"]
+target-version = "py311"
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # Pyflakes
+    "I",   # isort
+    "UP",  # pyupgrade
+    "N",   # pep8-naming
+    "B",   # flake8-bugbear
+    "A",   # flake8-builtins
+    "C4",  # flake8-comprehensions
+    "PTH", # flake8-use-pathlib
+    "SIM", # flake8-simplify
+    "RUF", # Ruff-specific rules
+]
+ignore = [
+    "B008",   # do not perform function calls in default arguments
+    "RUF012", # mutable class variables — fine for provider registries
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["archer"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+
+# ---------------------------------------------------------------------------
+# Pyright — static type checking
+# ---------------------------------------------------------------------------
+[tool.pyright]
+include = ["src"]
+pythonVersion = "3.11"
+typeCheckingMode = "standard"
+
+# ---------------------------------------------------------------------------
+# Pytest
+# ---------------------------------------------------------------------------
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-v --tb=short"

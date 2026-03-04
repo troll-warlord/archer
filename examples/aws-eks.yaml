@@ -1,0 +1,55 @@
+# EKS cluster with managed node group
+# Private subnets for node group, public subnets for ALB ingress.
+# NAT Gateway provides outbound internet for private nodes.
+
+project: my-app
+stack: dev
+provider: aws
+region: us-east-1
+
+resources:
+  vpc:
+    name: eks-vpc
+    cidr_block: 10.0.0.0/16
+
+  subnets:
+    - name: public-1
+      cidr_block: 10.0.1.0/24
+      availability_zone: us-east-1a
+      type: public
+    - name: public-2
+      cidr_block: 10.0.2.0/24
+      availability_zone: us-east-1b
+      type: public
+
+    - name: private-1
+      cidr_block: 10.0.10.0/24
+      availability_zone: us-east-1a
+      type: private
+    - name: private-2
+      cidr_block: 10.0.11.0/24
+      availability_zone: us-east-1b
+      type: private
+
+  nat_gateways:
+    - name: nat-az1
+      subnet_ref: public-1
+      allocate_eip: true
+
+  eks:
+    - name: main-cluster
+      kubernetes_version: "1.31"
+      subnet_refs: [private-1, private-2]
+      endpoint_public_access: true
+      endpoint_private_access: true
+      node_groups:
+        - name: general
+          instance_types: [t3.medium]
+          min_size: 2
+          max_size: 5
+          desired_size: 2
+          subnet_refs: [private-1, private-2]
+          disk_size_gb: 20
+          ami_type: AL2_x86_64
+      tags:
+        Environment: dev

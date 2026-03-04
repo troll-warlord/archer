@@ -1,0 +1,100 @@
+# Classic 3-tier web application (web + app + db)
+# - Public subnets:  ALB facing the internet
+# - Private subnets: EC2 app servers behind the ALB
+# - Private DB subnets: RDS PostgreSQL (no public access)
+
+project: my-app
+stack: dev
+provider: aws
+region: us-east-1
+
+resources:
+  vpc:
+    name: main-vpc
+    cidr_block: 10.0.0.0/16
+
+  subnets:
+    # Public tier — ALB
+    - name: public-1
+      cidr_block: 10.0.1.0/24
+      availability_zone: us-east-1a
+      type: public
+    - name: public-2
+      cidr_block: 10.0.2.0/24
+      availability_zone: us-east-1b
+      type: public
+
+    # App tier — EC2 / ASG
+    - name: app-1
+      cidr_block: 10.0.10.0/24
+      availability_zone: us-east-1a
+      type: private
+    - name: app-2
+      cidr_block: 10.0.11.0/24
+      availability_zone: us-east-1b
+      type: private
+
+    # DB tier — RDS
+    - name: db-1
+      cidr_block: 10.0.20.0/24
+      availability_zone: us-east-1a
+      type: private
+    - name: db-2
+      cidr_block: 10.0.21.0/24
+      availability_zone: us-east-1b
+      type: private
+
+  nat_gateways:
+    - name: nat-az1
+      subnet_ref: public-1
+      allocate_eip: true
+
+  alb:
+    - name: web-alb
+      scheme: internet-facing
+      subnet_refs: [public-1, public-2]
+      target_groups:
+        - name: app-tg
+          port: 80
+          protocol: HTTP
+          health_check_path: /health
+      listeners:
+        - port: 80
+          protocol: HTTP
+          # Redirect HTTP → HTTPS
+          redirect:
+            port: 443
+            protocol: HTTPS
+            status_code: HTTP_301
+        - port: 443
+          protocol: HTTPS
+          certificate_arn: ""       # fill in your ACM ARN, or use acm_certificates below
+          default_target_group: app-tg
+
+  asg:
+    - name: app-asg
+      min_size: 2
+      max_size: 6
+      desired_capacity: 2
+      subnet_refs: [app-1, app-2]
+      launch_template:
+        instance_type: t3.small
+        ami: ami-0c02fb55956c7d316   # Amazon Linux 2 — us-east-1
+      health_check_type: ELB
+      tags:
+        Role: app-server
+
+  rds:
+    - name: main-postgres
+      engine: postgres
+      engine_version: "15.3"
+      instance_class: db.t3.micro
+      allocated_storage: 20
+      db_name: appdb
+      username: appuser
+      password_env_var: DB_PASSWORD   # export DB_PASSWORD=... before running
+      subnet_refs: [db-1, db-2]
+      multi_az: true
+      publicly_accessible: false
+      tags:
+        Role: database

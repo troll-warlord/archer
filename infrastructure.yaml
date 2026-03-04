@@ -1,0 +1,330 @@
+# infrastructure.yaml
+# ─────────────────────────────────────────────────────────────────────────────
+# archer sample — Full-stack AWS architecture
+#
+#   Networking  : VPC, subnets (public/private), NAT Gateway, VPC Endpoints
+#   Security    : KMS CMK, IAM roles
+#   Compute     : EC2, Auto Scaling Group, EKS cluster, ECS Fargate service
+#   Database    : RDS PostgreSQL
+#   Storage     : S3 bucket (encrypted), EFS file system
+#   Load Balancing : Application Load Balancer (HTTP → HTTPS redirect + forwarding)
+#   DNS / TLS   : Route 53 hosted zone, A-record alias, ACM certificate
+#
+# Prerequisites:
+#   export AWS_ACCESS_KEY_ID=<your-key>
+#   export AWS_SECRET_ACCESS_KEY=<your-secret>
+#   export DB_PASSWORD=<strong-password>   # used by the RDS instance below
+#
+# Deploy:
+#   archer up --config infrastructure.yaml
+# ─────────────────────────────────────────────────────────────────────────────
+
+project: my-app
+stack: dev
+provider: aws
+region: us-east-1
+
+# ---------------------------------------------------------------------------
+# State backend  (defaults to local filesystem under .archer-state/)
+# ---------------------------------------------------------------------------
+backend:
+  type: local
+  path: .archer-state
+
+# ---------------------------------------------------------------------------
+# Resources  (built in dependency order by the provider)
+# ---------------------------------------------------------------------------
+resources:
+
+  # ── KMS ──────────────────────────────────────────────────────────────────
+  # Customer-managed keys are created first so downstream resources
+  # (S3, RDS, EFS, Secrets Manager, etc.) can reference their ARNs.
+  kms_keys:
+    - name: app-cmk
+      description: "General-purpose CMK for my-app"
+      enable_key_rotation: true
+      deletion_window_days: 30
+      tags:
+        Purpose: encryption
+
+  # ── IAM ───────────────────────────────────────────────────────────────────
+  iam_roles:
+    # EC2 instance role — allows SSM Session Manager (no bastion host needed)
+    - name: ec2-instance-role
+      assume_role_policy: |
+        {
+          "Version": "2012-10-17",
+          "Statement": [{
+            "Effect": "Allow",
+            "Principal": { "Service": "ec2.amazonaws.com" },
+            "Action": "sts:AssumeRole"
+          }]
+        }
+      managed_policy_arns:
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+      tags:
+        Purpose: ec2-ssm
+
+  # ── VPC ──────────────────────────────────────────────────────────────────
+  vpc:
+    name: main-vpc
+    cidr_block: 10.0.0.0/16
+    enable_dns_hostnames: true
+    enable_dns_support: true
+
+  # ── Subnets ───────────────────────────────────────────────────────────────
+  #   Web tier  (public)  — internet-facing; ALB + NAT Gateway EIPs live here
+  #   App tier  (private) — compute; EC2, ASG, EKS nodes, ECS tasks
+  #   Data tier (private) — isolated; RDS, EFS mount targets
+  subnets:
+    # Web tier — public
+    - name: web-subnet-a
+      cidr_block: 10.0.1.0/24
+      availability_zone: us-east-1a
+      type: public
+
+    - name: web-subnet-b
+      cidr_block: 10.0.2.0/24
+      availability_zone: us-east-1b
+      type: public
+
+    # App tier — private
+    - name: app-subnet-a
+      cidr_block: 10.0.11.0/24
+      availability_zone: us-east-1a
+      type: private
+
+    - name: app-subnet-b
+      cidr_block: 10.0.12.0/24
+      availability_zone: us-east-1b
+      type: private
+
+    # Data tier — private
+    - name: data-subnet-a
+      cidr_block: 10.0.21.0/24
+      availability_zone: us-east-1a
+      type: private
+
+    - name: data-subnet-b
+      cidr_block: 10.0.22.0/24
+      availability_zone: us-east-1b
+      type: private
+
+  # ── NAT Gateway ───────────────────────────────────────────────────────────
+  # Placed in a public subnet; adds a default route to every private subnet's
+  # route table so app/data tier instances can reach the internet outbound.
+  nat_gateways:
+    - name: main-nat
+      subnet_ref: web-subnet-a   # must be a public subnet
+      allocate_eip: true         # allocates a new Elastic IP automatically
+
+  # ── VPC Endpoints ─────────────────────────────────────────────────────────
+  # Gateway endpoints are free and keep S3/DynamoDB traffic off the NAT GW.
+  vpc_endpoints:
+    - name: s3-gateway-endpoint
+      service_name: com.amazonaws.us-east-1.s3
+      endpoint_type: Gateway
+
+    - name: ssm-interface-endpoint
+      service_name: com.amazonaws.us-east-1.ssm
+      endpoint_type: Interface
+      subnet_refs:
+        - app-subnet-a
+        - app-subnet-b
+      private_dns_enabled: true
+
+  # ── S3 ───────────────────────────────────────────────────────────────────
+  s3:
+    - name: my-app-assets
+      versioning: true
+      sse_algorithm: aws:kms
+      kms_master_key_id: alias/app-cmk   # references the CMK created above
+      block_public_acls: true
+      block_public_policy: true
+      ignore_public_acls: true
+      restrict_public_buckets: true
+      tags:
+        Purpose: app-assets
+
+  # ── EFS ──────────────────────────────────────────────────────────────────
+  # Shared file system mounted on all app-tier instances/containers.
+  efs:
+    - name: app-shared-fs
+      performance_mode: generalPurpose
+      throughput_mode: elastic
+      encrypted: true
+      subnet_refs:
+        - app-subnet-a
+        - app-subnet-b
+      tags:
+        Purpose: shared-storage
+
+  # ── Application Load Balancer ─────────────────────────────────────────────
+  alb:
+    - name: web-alb
+      internal: false
+      subnet_refs:
+        - web-subnet-a
+        - web-subnet-b
+      deletion_protection: false
+      target_groups:
+        - name: app-tg
+          port: 8080
+          protocol: HTTP
+          target_type: ip
+          health_check_path: /health
+          health_check_interval: 30
+      listeners:
+        # Port 80 — redirect to HTTPS
+        - port: 80
+          protocol: HTTP
+          target_group_ref: app-tg
+          redirect_to_https: true
+        # Port 443 — forward to app target group
+        - port: 443
+          protocol: HTTPS
+          target_group_ref: app-tg
+          certificate_arn: ""   # filled in automatically after ACM cert is created; paste ARN here for subsequent deployments
+          ssl_policy: ELBSecurityPolicy-TLS13-1-2-2021-06
+      tags:
+        Tier: web
+
+  # ── Route 53 ──────────────────────────────────────────────────────────────
+  route53_zones:
+    - name: example.com
+      comment: "Managed by archer"
+      private: false
+
+  route53_records:
+    # Alias A-record pointing the apex domain at the ALB
+    - name: example.com
+      zone_ref: example.com
+      type: A
+      alias_dns_name: ""         # paste web-alb DNS name output here
+      alias_zone_id: ""          # paste web-alb hosted zone ID output here
+      alias_evaluate_target_health: true
+
+  # ── ACM Certificate ───────────────────────────────────────────────────────
+  # DNS validation records are created automatically in the zone above.
+  acm_certificates:
+    - name: app-cert
+      domain_name: example.com
+      subject_alternative_names:
+        - "*.example.com"
+      validation_method: DNS
+      zone_ref: example.com      # auto-creates the CNAME validation record
+      tags:
+        Purpose: tls
+
+  # ── EC2 instances ─────────────────────────────────────────────────────────
+  # Replace `ami` with the latest Amazon Linux 2023 AMI ID for your region:
+  #   aws ec2 describe-images --owners amazon \
+  #     --filters "Name=name,Values=al2023-ami-*-x86_64" \
+  #     --query "sort_by(Images,&CreationDate)[-1].ImageId" --output text
+  ec2:
+    - name: bastion
+      instance_type: t3.micro
+      ami: ami-0c02fb55956c7d316   # Amazon Linux 2023 us-east-1 (update as needed)
+      subnet_ref: web-subnet-a
+      assign_public_ip: true
+      root_volume:
+        volume_type: gp3
+        volume_size_gb: 20
+        encrypted: true
+      tags:
+        Role: bastion
+
+  # ── Auto Scaling Group ────────────────────────────────────────────────────
+  # Production app tier — scales between 2 and 6 instances.
+  asg:
+    - name: app-asg
+      min_size: 2
+      max_size: 6
+      desired_capacity: 2
+      subnet_refs:
+        - app-subnet-a
+        - app-subnet-b
+      health_check_type: ELB
+      health_check_grace_period: 300
+      launch_template:
+        ami: ami-0c02fb55956c7d316
+        instance_type: t3.medium
+        key_name: ""     # optional: name of an existing EC2 key pair
+        iam_instance_profile_arn: ""   # optional: paste ec2-instance-role ARN here
+      tags:
+        Tier: app
+        Role: app-server
+
+  # ── EKS Cluster ───────────────────────────────────────────────────────────
+  # Uncomment to deploy a managed Kubernetes cluster in the app subnets.
+  #
+  # eks:
+  #   - name: app-eks
+  #     kubernetes_version: "1.31"
+  #     subnet_refs:
+  #       - app-subnet-a
+  #       - app-subnet-b
+  #     endpoint_public_access: true
+  #     endpoint_private_access: true
+  #     node_groups:
+  #       - name: general
+  #         instance_types: ["t3.medium"]
+  #         min_size: 2
+  #         max_size: 5
+  #         desired_size: 2
+  #         disk_size_gb: 50
+  #         ami_type: AL2_x86_64
+  #         subnet_refs:
+  #           - app-subnet-a
+  #           - app-subnet-b
+  #     tags:
+  #       Tier: app
+
+  # ── ECS Fargate ───────────────────────────────────────────────────────────
+  # Uncomment to deploy a containerised service in the app subnets.
+  #
+  # ecs:
+  #   - name: app-cluster
+  #     services:
+  #       - name: api
+  #         task_cpu: 512
+  #         task_memory_mb: 1024
+  #         desired_count: 2
+  #         subnet_refs:
+  #           - app-subnet-a
+  #           - app-subnet-b
+  #         assign_public_ip: false
+  #         target_group_arn: ""   # paste app-tg ARN from ALB outputs here
+  #         containers:
+  #           - name: api
+  #             image: "123456789012.dkr.ecr.us-east-1.amazonaws.com/api:latest"
+  #             cpu: 512
+  #             memory_mb: 1024
+  #             port: 8080
+  #             environment:
+  #               ENV: production
+  #         tags:
+  #           Tier: app
+  #     tags:
+  #       Tier: app
+
+  # ── RDS (PostgreSQL) ──────────────────────────────────────────────────────
+  # The password is read from the DB_PASSWORD env var at deploy time.
+  # It is NEVER stored in this YAML file.
+  rds:
+    - name: main-postgres
+      engine: postgres
+      engine_version: "15.3"
+      instance_class: db.t3.medium
+      allocated_storage: 50
+      db_name: appdb
+      username: dbadmin
+      password_env_var: DB_PASSWORD   # export DB_PASSWORD=<strong-password>
+      subnet_refs:
+        - data-subnet-a
+        - data-subnet-b
+      multi_az: false           # set to true for production HA
+      publicly_accessible: false
+      tags:
+        Tier: data
+        Role: primary-db
