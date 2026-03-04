@@ -356,9 +356,9 @@ ______________________________________________________________________
 
 ### Add a new AWS resource type
 
-1. **Model** — add a Pydantic model in `src/archer/models/aws/<domain>.py` (e.g. `models/aws/cache.py` for ElastiCache)
+1. **Model** — add a Pydantic model in `src/archer/models/aws/<service>.py` (named after the AWS service namespace, e.g. `waf.py`)
 1. **Register** — add it as a field on `AwsResources` in `src/archer/models/aws/__init__.py`
-1. **Builder** — create `src/archer/modules/aws/<domain>/<resource>.py` with an early-return guard
+1. **Builder** — create `src/archer/modules/aws/<service>.py` with an early-return guard
 1. **Wire** — call the builder from `AWSProvider.build_resources()` in the correct dependency position
 1. **Test** — add a unit test in `tests/unit/test_builders.py`
 
@@ -385,42 +385,16 @@ ______________________________________________________________________
 
 ## Project structure
 
-```
-archer/
-├── pyproject.toml
-├── examples/              ← sample YAML configurations
-├── tests/
-│   ├── conftest.py
-│   └── unit/
-│       ├── test_models.py   ← Pydantic validator tests
-│       └── test_builders.py ← builder early-return tests
-└── src/archer/
-    ├── cli.py             ← Click commands + rich presentation
-    ├── engine.py          ← Pulumi Automation API wrapper
-    ├── models/
-    │   ├── __init__.py    ← InfrastructureConfig + re-exports
-    │   ├── base.py        ← BackendConfig, OperationResult, ResourceChange
-    │   ├── aws/
-    │   │   ├── compute.py, database.py, dns.py
-    │   │   ├── loadbalancing.py, networking.py
-    │   │   ├── security.py, storage.py
-    │   ├── azure.py
-    │   └── gcp.py
-    ├── modules/aws/       ← one builder class per service domain
-    │   ├── compute/       ← Ec2Builder, AsgBuilder, EksBuilder, EcsBuilder
-    │   ├── database/      ← RdsBuilder
-    │   ├── dns/           ← Route53Builder, AcmBuilder
-    │   ├── loadbalancing/ ← AlbBuilder
-    │   ├── networking/    ← VpcBuilder, SubnetBuilder, NatGatewayBuilder, …
-    │   ├── security/      ← IamBuilder, KmsBuilder
-    │   └── storage/       ← S3Builder, EfsBuilder
-    └── providers/
-        ├── __init__.py    ← PROVIDER_REGISTRY
-        ├── base.py        ← BaseProvider ABC
-        ├── aws.py         ← AWSProvider (orchestrates all builders)
-        ├── azure.py
-        └── gcp.py
-```
+| Path | Purpose |
+|---|---|
+| `src/archer/cli.py` | Click commands + rich presentation (no Pulumi imports) |
+| `src/archer/engine.py` | Pulumi Automation API wrapper |
+| `src/archer/models/base.py` | Shared models: `BackendConfig`, `OperationResult`, `ResourceChange` |
+| `src/archer/models/<cloud>/` | One file per service namespace (e.g. `models/aws/ec2.py`, `models/aws/rds.py`). Adding a new service = add one file here. |
+| `src/archer/modules/<cloud>/` | One builder file per service — mirrors `models/<cloud>/`. Each builder has an early-return guard so unused services add zero cost. |
+| `src/archer/providers/` | Thin orchestration layer. `aws.py` calls builders in dependency order; `azure.py` / `gcp.py` delegate to their respective module packages. |
+| `examples/` | Ready-to-run YAML configurations |
+| `tests/unit/` | Pydantic validator tests + builder early-return tests |
 
 ______________________________________________________________________
 

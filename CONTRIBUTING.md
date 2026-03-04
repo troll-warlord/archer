@@ -41,60 +41,36 @@ ______________________________________________________________________
 
 ## Project layout
 
-```
-src/archer/
-├── cli.py              ← Click commands + rich presentation (no Pulumi imports)
-├── engine.py           ← Pulumi Automation API wrapper
-├── models/
-│   ├── __init__.py     ← InfrastructureConfig + re-exports
-│   ├── base.py         ← BackendConfig, OperationResult, ResourceChange
-│   ├── aws/
-│   │   ├── compute.py  ← EC2, ASG, EKS, ECS models
-│   │   ├── database.py ← RDS model
-│   │   ├── dns.py      ← Route53, ACM models
-│   │   ├── loadbalancing.py
-│   │   ├── networking.py ← VPC, Subnet, NAT GW, TGW, VPC Endpoint models
-│   │   ├── security.py   ← IAM, KMS models
-│   │   └── storage.py    ← S3, EFS models
-│   ├── azure.py
-│   └── gcp.py
-├── modules/aws/        ← One builder class per service domain
-│   ├── compute/        ← Ec2Builder, AsgBuilder, EksBuilder, EcsBuilder
-│   ├── database/       ← RdsBuilder
-│   ├── dns/            ← Route53Builder, AcmBuilder
-│   ├── loadbalancing/  ← AlbBuilder
-│   ├── networking/     ← VpcBuilder, SubnetBuilder, NatGatewayBuilder, …
-│   ├── security/       ← IamBuilder, KmsBuilder
-│   └── storage/        ← S3Builder, EfsBuilder
-└── providers/
-    ├── __init__.py     ← PROVIDER_REGISTRY
-    ├── base.py         ← BaseProvider ABC
-    ├── aws.py          ← AWSProvider (orchestrates all builders)
-    ├── azure.py        ← AzureProvider
-    └── gcp.py          ← GCPProvider
-```
+| Layer | Path | Convention |
+|---|---|---|
+| **CLI** | `src/archer/cli.py` | Click commands + rich presentation only — no Pulumi imports |
+| **Engine** | `src/archer/engine.py` | Pulumi Automation API wrapper |
+| **Models** | `src/archer/models/base.py` | Shared config + result models |
+| | `src/archer/models/<cloud>/` | One file per service namespace (e.g. `aws/ec2.py`, `aws/rds.py`). File name = AWS/Azure/GCP service name. |
+| **Builders** | `src/archer/modules/<cloud>/` | One builder file per service — mirrors `models/<cloud>/`. Every builder has an early-return guard. |
+| **Providers** | `src/archer/providers/` | Thin orchestration layer. `aws.py` calls builders in dependency order; cloud providers delegate to their module package. |
+| **Tests** | `tests/unit/` | `test_models.py` (validators) + `test_builders.py` (early-return guards) |
 
 ______________________________________________________________________
 
 ## Adding a new AWS resource
 
-Example: adding ElastiCache.
+Example: adding an SQS queue.
 
 ### 1. Add a Pydantic model
 
-Create `src/archer/models/aws/cache.py`:
+Create `src/archer/models/aws/sqs.py` (named after the AWS service namespace):
 
 ```python
 from pydantic import BaseModel, ConfigDict, Field
 
-class ElasticacheConfig(BaseModel):
+class SqsQueueConfig(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     name: str
-    node_type: str = "cache.t3.micro"
-    num_cache_nodes: int = 1
-    engine: str = "redis"
-    subnet_refs: list[str] = Field(default_factory=list)
+    fifo: bool = False
+    visibility_timeout_seconds: int = 30
+    message_retention_seconds: int = 345600  # 4 days
     tags: dict[str, str] = Field(default_factory=dict)
 ```
 
@@ -103,37 +79,49 @@ class ElasticacheConfig(BaseModel):
 In `src/archer/models/aws/__init__.py`:
 
 ```python
-from archer.models.aws.cache import ElasticacheConfig
+from archer.models.aws.sqs import SqsQueueConfig
 
 class AwsResources(BaseModel):
     ...
-    elasticache: list[ElasticacheConfig] = Field(default_factory=list)
+    sqs: list[SqsQueueConfig] = Field(default_factory=list)
 ```
 
 ### 3. Write a builder
 
-Create `src/archer/modules/aws/cache/elasticache.py`:
+Create `src/archer/modules/aws/sqs.py`:
 
 ```python
 from dataclasses import dataclass, field
-import pulumi, pulumi_aws as aws
-from archer.modules.aws.networking.subnets import SubnetBuildResult
+from typing import Any
+import pulumi
+import pulumi_aws as aws
+from archer.modules.aws.subnets import SubnetBuildResult
 
 @dataclass
-class ElasticacheBuildResult:
-    clusters: dict[str, aws.elasticache.Cluster] = field(default_factory=dict)
-    outputs: dict = field(default_factory=dict)
+class SqsBuildResult:
+    queues: dict[str, aws.sqs.Queue] = field(default_factory=dict)
+    outputs: dict[str, Any] = field(default_factory=dict)
 
-class ElasticacheBuilder:
+class SqsBuilder:
     def __init__(self, config, subnet_result: SubnetBuildResult) -> None:
         self._config = config
         self._subnet_result = subnet_result
 
-    def build(self) -> ElasticacheBuildResult:
+    def build(self) -> SqsBuildResult:
         resources = self._config.resources
-        if not resources.elasticache:          # ← early-return guard is mandatory
-            return ElasticacheBuildResult()
-        ...
+        if not resources.sqs:          # ← early-return guard is mandatory
+            return SqsBuildResult()
+        result = SqsBuildResult()
+        for q_cfg in resources.sqs:
+            queue = aws.sqs.Queue(
+                q_cfg.name,
+                fifo_queue=q_cfg.fifo,
+                visibility_timeout_seconds=q_cfg.visibility_timeout_seconds,
+                message_retention_seconds=q_cfg.message_retention_seconds,
+            )
+            result.queues[q_cfg.name] = queue
+            result.outputs[f"{q_cfg.name}_queue_url"] = queue.url
+        return result
 ```
 
 ### 4. Wire into `AWSProvider`
@@ -142,13 +130,16 @@ In `src/archer/providers/aws.py`, call it at the right point in the dependency
 chain and merge the outputs:
 
 ```python
-cache_result = ElasticacheBuilder(self.config, subnet_result).build()
-self._output_map.update(cache_result.outputs)
+from archer.modules.aws.sqs import SqsBuilder
+
+# inside build_resources():
+sqs_result = SqsBuilder(self.config, subnet_result).build()
+self._output_map.update(sqs_result.outputs)
 ```
 
 ### 5. Add tests
 
-Add `tests/unit/test_elasticache_builder.py` with at minimum:
+In `tests/unit/test_builders.py`, add at minimum:
 
 - An empty-list early-return test
 - A smoke test that verifies the builder creates the expected Pulumi resources
