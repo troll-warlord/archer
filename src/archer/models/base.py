@@ -39,7 +39,7 @@ class BackendConfig(BaseModel):
 
     @model_validator(mode="after")
     def cloud_requires_url_or_token(self) -> Self:
-        # type: cloud without url is valid — Pulumi Cloud honors PULUMI_ACCESS_TOKEN
+        # 'cloud' type without 'url' is valid - Pulumi Cloud honors PULUMI_ACCESS_TOKEN
         return self
 
 
