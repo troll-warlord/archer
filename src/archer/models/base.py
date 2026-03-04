@@ -13,6 +13,7 @@ from __future__ import annotations
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, model_validator
+from typing_extensions import Self
 
 # ---------------------------------------------------------------------------
 # Shared valid-value frozensets
@@ -38,7 +39,7 @@ class BackendConfig(BaseModel):
     url: str | None = None
 
     @model_validator(mode="after")
-    def cloud_requires_url_or_token(self) -> BackendConfig:
+    def cloud_requires_url_or_token(self) -> Self:
         # type: cloud without url is valid — Pulumi Cloud honors PULUMI_ACCESS_TOKEN
         return self
 

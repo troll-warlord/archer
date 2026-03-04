@@ -204,7 +204,7 @@ class AlbBuilder:
             result.target_groups.update(tgs)
 
             for i, listener_cfg in enumerate(nlb_cfg.listeners):
-                tg = tgs.get(listener_cfg.target_group_ref)
+                tg = tgs.get(listener_cfg.target_group_ref) if listener_cfg.target_group_ref else None
                 if not tg:
                     continue
                 listener_kwargs = {
