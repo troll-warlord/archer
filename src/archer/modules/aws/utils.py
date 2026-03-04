@@ -9,7 +9,6 @@ from typing import TYPE_CHECKING, Any
 import pulumi
 
 if TYPE_CHECKING:
-
     from archer.modules.aws.networking.subnets import SubnetBuildResult
     from archer.modules.aws.networking.vpc import VpcBuildResult
 
@@ -80,3 +79,4 @@ def make_tags(
     if extra:
         base.update(extra)
     return base
+
