@@ -79,4 +79,3 @@ def make_tags(
     if extra:
         base.update(extra)
     return base
-
