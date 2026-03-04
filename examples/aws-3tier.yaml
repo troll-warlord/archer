@@ -63,13 +63,13 @@ resources:
           protocol: HTTP
           # Redirect HTTP → HTTPS
           redirect:
-            port: 443
+            port: "443"
             protocol: HTTPS
             status_code: HTTP_301
         - port: 443
           protocol: HTTPS
           certificate_arn: ""       # fill in your ACM ARN, or use acm_certificates below
-          default_target_group: app-tg
+          target_group_ref: app-tg
 
   asg:
     - name: app-asg

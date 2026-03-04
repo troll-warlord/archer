@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 
 from archer.models import AwsResources, InfrastructureConfig
-from archer.models.aws.networking import SubnetConfig, VpcConfig
+from archer.models.aws.vpc import SubnetConfig, VpcConfig
 
 
 @pytest.fixture()

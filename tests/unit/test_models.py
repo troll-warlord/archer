@@ -6,9 +6,9 @@ import pytest
 from pydantic import ValidationError
 
 from archer.models import AwsResources, InfrastructureConfig
-from archer.models.aws.compute import Ec2Config
-from archer.models.aws.database import RdsConfig
-from archer.models.aws.networking import SubnetConfig, VpcConfig
+from archer.models.aws.ec2 import Ec2Config
+from archer.models.aws.rds import RdsConfig
+from archer.models.aws.vpc import SubnetConfig, VpcConfig
 
 # ---------------------------------------------------------------------------
 # InfrastructureConfig — top-level validation

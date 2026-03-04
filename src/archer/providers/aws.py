@@ -19,27 +19,27 @@ from typing import Any
 import pulumi
 
 from archer.models import InfrastructureConfig
-from archer.modules.aws.compute.asg import AsgBuilder
-from archer.modules.aws.compute.ec2 import Ec2Builder
-from archer.modules.aws.compute.ecs import EcsBuilder
-from archer.modules.aws.compute.eks import EksBuilder
-from archer.modules.aws.database.elasticache import ElastiCacheBuilder
-from archer.modules.aws.database.rds import RdsBuilder
-from archer.modules.aws.dns.acm import AcmBuilder
-from archer.modules.aws.dns.route53 import Route53Builder
-from archer.modules.aws.loadbalancing.alb import AlbBuilder
-from archer.modules.aws.monitoring.cloudwatch import CloudWatchBuilder
-from archer.modules.aws.networking.endpoints import VpcEndpointBuilder
-from archer.modules.aws.networking.nat_gateway import NatGatewayBuilder
-from archer.modules.aws.networking.security_groups import SecurityGroupBuilder
-from archer.modules.aws.networking.subnets import SubnetBuilder
-from archer.modules.aws.networking.transit_gateway import TransitGatewayBuilder
-from archer.modules.aws.networking.vpc import VpcBuilder
-from archer.modules.aws.security.iam import IamBuilder
-from archer.modules.aws.security.kms import KmsBuilder
-from archer.modules.aws.security.secrets_manager import SecretsManagerBuilder
-from archer.modules.aws.storage.efs import EfsBuilder
-from archer.modules.aws.storage.s3 import S3Builder
+from archer.modules.aws.acm import AcmBuilder
+from archer.modules.aws.asg import AsgBuilder
+from archer.modules.aws.cloudwatch import CloudWatchBuilder
+from archer.modules.aws.ec2 import Ec2Builder
+from archer.modules.aws.ecs import EcsBuilder
+from archer.modules.aws.efs import EfsBuilder
+from archer.modules.aws.eks import EksBuilder
+from archer.modules.aws.elasticache import ElastiCacheBuilder
+from archer.modules.aws.elb import AlbBuilder
+from archer.modules.aws.endpoints import VpcEndpointBuilder
+from archer.modules.aws.iam import IamBuilder
+from archer.modules.aws.kms import KmsBuilder
+from archer.modules.aws.nat_gateway import NatGatewayBuilder
+from archer.modules.aws.rds import RdsBuilder
+from archer.modules.aws.route53 import Route53Builder
+from archer.modules.aws.s3 import S3Builder
+from archer.modules.aws.secrets_manager import SecretsManagerBuilder
+from archer.modules.aws.security_groups import SecurityGroupBuilder
+from archer.modules.aws.subnets import SubnetBuilder
+from archer.modules.aws.transit_gateway import TransitGatewayBuilder
+from archer.modules.aws.vpc import VpcBuilder
 from archer.providers.base import BaseProvider
 
 

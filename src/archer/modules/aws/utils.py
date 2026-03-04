@@ -9,8 +9,8 @@ from typing import TYPE_CHECKING, Any
 import pulumi
 
 if TYPE_CHECKING:
-    from archer.modules.aws.networking.subnets import SubnetBuildResult
-    from archer.modules.aws.networking.vpc import VpcBuildResult
+    from archer.modules.aws.subnets import SubnetBuildResult
+    from archer.modules.aws.vpc import VpcBuildResult
 
 
 def resolve_subnet_ids(

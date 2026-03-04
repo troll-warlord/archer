@@ -2,28 +2,28 @@ from __future__ import annotations
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from archer.models.aws.cache import ElastiCacheClusterConfig
-from archer.models.aws.compute import (
-    AsgConfig,
-    AsgLaunchTemplateConfig,
+from archer.models.aws.acm import AcmCertificateConfig
+from archer.models.aws.asg import AsgConfig, AsgLaunchTemplateConfig
+from archer.models.aws.cloudwatch import CloudWatchAlarmConfig, CloudWatchLogGroupConfig
+from archer.models.aws.ec2 import (
     EbsVolumeConfig,
     Ec2Config,
     Ec2SecurityGroupConfig,
-    EcsConfig,
-    EcsContainerConfig,
-    EcsServiceConfig,
-    EksConfig,
-    EksNodeGroupConfig,
+    SecurityGroupConfig,
     SecurityGroupRuleConfig,
 )
-from archer.models.aws.database import RdsConfig
-from archer.models.aws.dns import AcmCertificateConfig, Route53RecordConfig, Route53ZoneConfig
-from archer.models.aws.loadbalancing import AlbConfig, ListenerConfig, NlbConfig, TargetGroupConfig
-from archer.models.aws.monitoring import CloudWatchAlarmConfig, CloudWatchLogGroupConfig
-from archer.models.aws.networking import NatGatewayConfig, SubnetConfig, TransitGatewayConfig, VpcConfig, VpcEndpointConfig
-from archer.models.aws.secrets import SecretsManagerSecretConfig
-from archer.models.aws.security import IamPolicyConfig, IamRoleConfig, KmsKeyConfig, SecurityGroupConfig
-from archer.models.aws.storage import EfsConfig, S3Config
+from archer.models.aws.ecs import EcsConfig, EcsContainerConfig, EcsServiceConfig
+from archer.models.aws.efs import EfsConfig
+from archer.models.aws.eks import EksConfig, EksNodeGroupConfig
+from archer.models.aws.elasticache import ElastiCacheClusterConfig, ElastiCacheSubnetGroupConfig
+from archer.models.aws.elb import AlbConfig, ListenerConfig, NlbConfig, RedirectConfig, TargetGroupConfig
+from archer.models.aws.iam import IamPolicyConfig, IamRoleConfig
+from archer.models.aws.kms import KmsKeyConfig
+from archer.models.aws.rds import RdsConfig
+from archer.models.aws.route53 import Route53RecordConfig, Route53ZoneConfig
+from archer.models.aws.s3 import S3Config
+from archer.models.aws.secrets_manager import SecretsManagerSecretConfig
+from archer.models.aws.vpc import NatGatewayConfig, SubnetConfig, TransitGatewayConfig, VpcConfig, VpcEndpointConfig
 
 
 class AwsResources(BaseModel):
@@ -72,15 +72,13 @@ class AwsResources(BaseModel):
 
 
 __all__ = [
-    "VALID_AWS_REGIONS",
-    "VALID_EC2_INSTANCE_TYPES",
-    "VALID_RDS_ENGINES",
-    "VALID_RDS_INSTANCE_CLASSES",
     "AcmCertificateConfig",
     "AlbConfig",
     "AsgConfig",
     "AsgLaunchTemplateConfig",
     "AwsResources",
+    "CloudWatchAlarmConfig",
+    "CloudWatchLogGroupConfig",
     "EbsVolumeConfig",
     "Ec2Config",
     "Ec2SecurityGroupConfig",
@@ -90,6 +88,8 @@ __all__ = [
     "EfsConfig",
     "EksConfig",
     "EksNodeGroupConfig",
+    "ElastiCacheClusterConfig",
+    "ElastiCacheSubnetGroupConfig",
     "IamPolicyConfig",
     "IamRoleConfig",
     "KmsKeyConfig",
@@ -97,9 +97,12 @@ __all__ = [
     "NatGatewayConfig",
     "NlbConfig",
     "RdsConfig",
+    "RedirectConfig",
     "Route53RecordConfig",
     "Route53ZoneConfig",
     "S3Config",
+    "SecretsManagerSecretConfig",
+    "SecurityGroupConfig",
     "SecurityGroupRuleConfig",
     "SubnetConfig",
     "TargetGroupConfig",

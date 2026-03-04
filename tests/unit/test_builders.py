@@ -10,22 +10,22 @@ context — no real AWS calls are made.
 from __future__ import annotations
 
 from archer.models import AwsResources, InfrastructureConfig
-from archer.models.aws.networking import SubnetConfig
-from archer.modules.aws.compute.asg import AsgBuilder
-from archer.modules.aws.compute.ec2 import Ec2Builder
-from archer.modules.aws.compute.ecs import EcsBuilder
-from archer.modules.aws.compute.eks import EksBuilder
-from archer.modules.aws.database.rds import RdsBuilder
-from archer.modules.aws.dns.acm import AcmBuilder
-from archer.modules.aws.dns.route53 import Route53Builder
-from archer.modules.aws.networking.nat_gateway import NatGatewayBuilder
-from archer.modules.aws.networking.subnets import SubnetBuilder, SubnetBuildResult
-from archer.modules.aws.networking.transit_gateway import TransitGatewayBuilder
-from archer.modules.aws.networking.vpc import VpcBuilder, VpcBuildResult
-from archer.modules.aws.security.iam import IamBuilder
-from archer.modules.aws.security.kms import KmsBuilder
-from archer.modules.aws.storage.efs import EfsBuilder
-from archer.modules.aws.storage.s3 import S3Builder
+from archer.models.aws.vpc import SubnetConfig
+from archer.modules.aws.acm import AcmBuilder
+from archer.modules.aws.asg import AsgBuilder
+from archer.modules.aws.ec2 import Ec2Builder
+from archer.modules.aws.ecs import EcsBuilder
+from archer.modules.aws.efs import EfsBuilder
+from archer.modules.aws.eks import EksBuilder
+from archer.modules.aws.iam import IamBuilder
+from archer.modules.aws.kms import KmsBuilder
+from archer.modules.aws.nat_gateway import NatGatewayBuilder
+from archer.modules.aws.rds import RdsBuilder
+from archer.modules.aws.route53 import Route53Builder
+from archer.modules.aws.s3 import S3Builder
+from archer.modules.aws.subnets import SubnetBuilder, SubnetBuildResult
+from archer.modules.aws.transit_gateway import TransitGatewayBuilder
+from archer.modules.aws.vpc import VpcBuilder, VpcBuildResult
 
 
 def _empty_config(**overrides) -> InfrastructureConfig:
@@ -97,7 +97,7 @@ class TestTransitGatewayBuilderEarlyReturn:
 class TestEc2BuilderEarlyReturn:
     def test_no_ec2_returns_empty(self):
         cfg = _empty_config()
-        from archer.modules.aws.networking.security_groups import SecurityGroupBuildResult
+        from archer.modules.aws.security_groups import SecurityGroupBuildResult
 
         result = Ec2Builder(cfg, _empty_subnet_result(), SecurityGroupBuildResult()).build()
         assert result.instances == {}
@@ -189,7 +189,7 @@ class TestRoute53BuilderEarlyReturn:
 
 class TestAcmBuilderEarlyReturn:
     def test_no_acm_returns_empty(self):
-        from archer.modules.aws.dns.route53 import Route53BuildResult
+        from archer.modules.aws.route53 import Route53BuildResult
 
         cfg = _empty_config()
         result = AcmBuilder(cfg, Route53BuildResult()).build()
