@@ -1,6 +1,12 @@
 # archer
 
-> A high-level Pulumi wrapper CLI for deploying cloud infrastructure from a single YAML file.
+**Infrastructure as Code from a single YAML file.** archer is an open-source CLI that lets you
+provision and manage cloud infrastructure on AWS, Azure, and GCP without writing Pulumi programs,
+Terraform HCL, or CloudFormation templates. Describe your stack in YAML — archer handles the rest.
+
+> **Keywords:** infrastructure as code, IaC, YAML infrastructure, AWS provisioning,
+> cloud deployment automation, Pulumi wrapper, declarative infrastructure, self-hosted IaC,
+> deploy AWS from YAML, infrastructure automation CLI
 
 [![CI](https://github.com/your-org/archer/actions/workflows/ci.yml/badge.svg)](https://github.com/your-org/archer/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
@@ -414,14 +420,21 @@ ______________________________________________________________________
 
 | Item | Status |
 |---|---|
-| AWS — full service coverage | ✅ 0.1.0 |
+| AWS — core service coverage | ✅ 0.1.0 |
 | Standalone security groups + global tags | ✅ 0.2.0 |
 | ElastiCache, Secrets Manager, CloudWatch | ✅ 0.2.0 |
 | `archer validate` + `--stack` flag + `archer output` | ✅ 0.2.0 |
+| Lambda + IAM execution role | 🔜 planned |
+| API Gateway (HTTP API + REST API) | 🔜 planned |
+| SNS topics + SQS queues | 🔜 planned |
+| DynamoDB tables | 🔜 planned |
+| CloudFront distributions | 🔜 planned |
+| Aurora / Aurora Serverless v2 | 🔜 planned |
+| Variable substitution in YAML (`${env}`, `${region}`) | 🔜 planned |
 | Azure — full parity with AWS | 🔜 planned |
 | GCP — full parity with AWS | 🔜 planned |
-| Aurora / Aurora Serverless v2 | 🔜 planned |
-| `archer import` — import existing resources | 💡 idea |
+| `archer import` — bring existing resources under management | 💡 idea |
+| Stack references — pass outputs from one config as inputs to another | 💡 idea |
 | Drift detection (`archer diff`) | 💡 idea |
 
 ______________________________________________________________________
