@@ -8,9 +8,9 @@ Terraform HCL, or CloudFormation templates. Describe your stack in YAML — arch
 > cloud deployment automation, Pulumi wrapper, declarative infrastructure, self-hosted IaC,
 > deploy AWS from YAML, infrastructure automation CLI
 
-[![CI](https://github.com/your-org/archer/actions/workflows/ci.yml/badge.svg)](https://github.com/your-org/archer/actions/workflows/ci.yml)
+[![CI](https://github.com/troll-warlord/archer/actions/workflows/ci.yml/badge.svg)](https://github.com/troll-warlord/archer/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://python.org)
+[![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://python.org)
 
 ______________________________________________________________________
 
