@@ -1,12 +1,8 @@
 # archer
 
-**Infrastructure as Code from a single YAML file.** archer is an open-source CLI that lets you
-provision and manage cloud infrastructure on AWS, Azure, and GCP without writing Pulumi programs,
-Terraform HCL, or CloudFormation templates. Describe your stack in YAML — archer handles the rest.
-
-> **Keywords:** infrastructure as code, IaC, YAML infrastructure, AWS provisioning,
-> cloud deployment automation, Pulumi wrapper, declarative infrastructure, self-hosted IaC,
-> deploy AWS from YAML, infrastructure automation CLI
+**Deploy cloud infrastructure from a YAML file.** archer is an open-source CLI for provisioning
+AWS, Azure, and GCP resources without writing Terraform HCL, Pulumi programs, or CloudFormation
+templates. Define your entire stack declaratively in one YAML file and let archer handle the rest.
 
 [![CI](https://github.com/troll-warlord/archer/actions/workflows/ci.yml/badge.svg)](https://github.com/troll-warlord/archer/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
@@ -28,6 +24,7 @@ ______________________________________________________________________
 
 ## Table of contents
 
+- [Why archer?](#why-archer)
 - [How it works](#how-it-works)
 - [Prerequisites](#prerequisites)
 - [Installation](#installation)
@@ -40,6 +37,30 @@ ______________________________________________________________________
 - [Extending archer](#extending-archer)
 - [Development](#development)
 - [Contributing](#contributing)
+
+______________________________________________________________________
+
+## Why archer?
+
+Most infrastructure-as-code tools make you write code. Terraform requires HCL, AWS CDK requires
+Python or TypeScript, CloudFormation requires verbose JSON/YAML with provider-specific syntax, and
+raw Pulumi requires a full program. archer flips this: you write a single, plain YAML file and
+archer generates and runs the Pulumi resources automatically.
+
+| Tool | What you write | Language |
+|---|---|---|
+| **archer** | One plain YAML file | None |
+| Terraform | `.tf` files in HCL | HCL |
+| AWS CDK | Full program | Python / TS / Java |
+| Pulumi | Full program | Python / TS / Go / .NET |
+| CloudFormation | Verbose provider YAML | CloudFormation DSL |
+| Ansible | Playbooks + roles | YAML + Jinja2 |
+
+archer is the right tool when you want:
+- **No IaC language to learn** — just YAML that reads like a config file
+- **Multi-cloud from one file** — switch `provider: aws` to `provider: gcp` and redeploy
+- **Fast iteration** — `archer preview` shows a diff in seconds, no plan files, no state locks
+- **Secrets-safe by design** — passwords are referenced by env-var name, never stored in YAML
 
 ______________________________________________________________________
 
