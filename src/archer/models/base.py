@@ -10,10 +10,9 @@ Contains:
 
 from __future__ import annotations
 
-from typing import Any, Literal
+from typing import Any, Literal, Self
 
 from pydantic import BaseModel, ConfigDict, model_validator
-from typing_extensions import Self
 
 # ---------------------------------------------------------------------------
 # Shared valid-value frozensets
